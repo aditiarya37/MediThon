@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  text       String
+  category   Category
+  confidence Float
+  source     String
+  createdAt  DateTime @default(now())
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Trend {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  category    Category
+  spikeScore  Float
+  window      String   // e.g. "24h", "7d"
+  sampleTexts String[]
+  createdAt   DateTime @default(now())
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+enum Category {
+  BRAND_PERCEPTION
+  SIDE_EFFECTS
+  COMPETITOR_ACTIVITY
+  REGULATION_POLICY
+  CLINICAL_TRIALS
+  MARKETING_PROMOTION
+}

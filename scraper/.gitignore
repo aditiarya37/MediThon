@@ -1,0 +1,15 @@
+# Environments and Secrets
+.env
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+
+# Models (Ignore both folders)
+model/
+pharma_model/
+*.pkl
+*.h5
+*.safetensors
