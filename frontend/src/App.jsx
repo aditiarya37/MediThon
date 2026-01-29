@@ -1,13 +1,6 @@
-import React from "react";
-import Layout from "./layout/Layout";
 import Dashboard from "./pages/Dashboard";
+import "./index.css";
 
-function App() {
-  return (
-    <Layout>
-      <Dashboard />
-    </Layout>
-  );
+export default function App() {
+  return <Dashboard />;
 }
-
-export default App;

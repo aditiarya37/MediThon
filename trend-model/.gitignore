@@ -1,0 +1,22 @@
+# Virtual Environment
+venv/
+env/
+
+# Python Cache (compiled files)
+__pycache__/
+*.py[cod]
+
+# Data Files (Keep your repo light)
+data/
+*.csv
+*.json
+
+# Environment Variables
+.env
+
+# Heavy Model Artifacts (Ignore the saved weights, but keep the python code)
+*.pkl
+*.h5
+*.pt
+*.pth
+*.safetensors

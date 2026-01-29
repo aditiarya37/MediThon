@@ -1,13 +1,20 @@
 import axios from "axios";
 
-const CLASSIFIER_API = process.env.CLASSIFIER_API_URL;
-
 export const classifyText = async (text, source) => {
-  const response = await axios.post(`${CLASSIFIER_API}/classify`, {
+  const CLASSIFIER_BASE_URL = process.env.CLASSIFIER_API_URL;
+
+  if (!CLASSIFIER_BASE_URL) {
+    throw new Error("❌ CLASSIFIER_API_URL is not set at runtime");
+  }
+
+  const url = `${CLASSIFIER_BASE_URL}/classify`;
+
+  console.log("Calling classifier at:", url);
+
+  const response = await axios.post(url, {
     text,
     source,
   });
 
   return response.data;
-  // { category: "...", confidence: 0.78 }
 };
