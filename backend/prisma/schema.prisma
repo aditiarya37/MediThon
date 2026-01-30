@@ -17,18 +17,20 @@ model Event {
 
   @@index([category])
   @@index([createdAt])
+  @@map("events")
 }
 
-model Trend {
+model TrendAlert {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   category    Category
   spikeScore  Float
-  window      String   // e.g. "24h", "7d"
+  window      String
   sampleTexts String[]
   createdAt   DateTime @default(now())
 
   @@index([category])
   @@index([createdAt])
+  @@map("trends")
 }
 
 enum Category {
