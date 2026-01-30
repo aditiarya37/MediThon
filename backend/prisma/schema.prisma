@@ -14,22 +14,18 @@ model Event {
   confidence Float
   source     String
   createdAt  DateTime @default(now())
-
-  @@index([category])
-  @@index([createdAt])
-  @@map("events")
+  
+  @@map("Event")
 }
 
-model TrendAlert {
+model Trend {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   category    Category
   spikeScore  Float
   window      String
   sampleTexts String[]
   createdAt   DateTime @default(now())
-
-  @@index([category])
-  @@index([createdAt])
+  
   @@map("trends")
 }
 

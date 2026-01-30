@@ -21,8 +21,15 @@ export const classifyAndStore = async (req, res, next) => {
       source,
     });
 
-    // 4️⃣ 🔥 AUTO‑RUN TREND DETECTION (non‑blocking)
-    runTrendDetection(); // intentionally NOT awaited
+    // 4️⃣ 🔥 AUTO-RUN TREND DETECTION (with error handling)
+    // Run in background but log if it fails
+    runTrendDetection()
+      .then(() => {
+        console.log("✅ Trend detection triggered successfully");
+      })
+      .catch((err) => {
+        console.error("❌ Trend detection failed:", err.message);
+      });
 
     // 5️⃣ Respond immediately
     res.status(201).json(savedEvent);

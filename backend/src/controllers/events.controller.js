@@ -4,11 +4,15 @@ export const getEvents = async (req, res, next) => {
   try {
     const events = await prisma.event.findMany({
       orderBy: { createdAt: "desc" },
-      take: 50, // limit for dashboard
     });
 
+    console.log(`✅ Successfully fetched ${events.length} events from DB`);
     res.json(events);
   } catch (err) {
-    next(err);
+    console.error("❌ Events Controller Error:", err);
+    res.status(500).json({
+      error: "Internal Server Error",
+      details: err.message,
+    });
   }
 };
