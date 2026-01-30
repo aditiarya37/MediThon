@@ -1,3 +1,4 @@
+// backend/prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -26,6 +27,7 @@ model Trend {
   sampleTexts String[]
   createdAt   DateTime @default(now())
   
+  // Maps the singular "Trend" model to the "trends" collection in MongoDB
   @@map("trends")
 }
 

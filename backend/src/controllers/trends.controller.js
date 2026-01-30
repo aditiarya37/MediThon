@@ -1,7 +1,9 @@
-import prisma from "../prisma/client.js";
+// backend/src/controllers/trends.controller.js
+import prisma from "../../prisma/client.js";
 
 export const getTrends = async (req, res, next) => {
   try {
+    // Uses 'prisma.trend' because the model is named 'Trend'
     const trends = await prisma.trend.findMany({
       orderBy: { createdAt: "desc" },
     });

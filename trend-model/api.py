@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from model.trend_model import detect_trends
 import traceback
 
@@ -139,12 +139,18 @@ def detect_and_store_trends():
         # 3. FORMAT FOR PRISMA
         prisma_compatible_results = []
         for t in results:
+            # Convert category string to match Prisma enum format
+            category_value = t["category"]
+            
+            # Create UTC datetime for MongoDB BSON Date
+            now = datetime.now(timezone.utc)
+            
             prisma_compatible_results.append({
-                "category": t["category"],
+                "category": category_value,
                 "spikeScore": float(t["spike_score"]),
                 "window": "1h",
                 "sampleTexts": [],
-                "createdAt": datetime.now()
+                "createdAt": now  # This will be stored as BSON Date
             })
 
         # 4. STORE IN DATABASE
@@ -156,10 +162,16 @@ def detect_and_store_trends():
         insert_result = trends_col.insert_many(prisma_compatible_results)
         print(f"💾 Inserted {len(insert_result.inserted_ids)} new trends into 'trends' collection")
 
-        # 5. FIX SERIALIZATION ERROR (Convert ObjectId to string)
+        # 5. FIX SERIALIZATION ERROR (Convert ObjectId and DateTime to string for JSON response)
+        response_trends = []
         for t in prisma_compatible_results:
-            if "_id" in t:
-                t["_id"] = str(t["_id"])
+            trend_copy = t.copy()
+            if "_id" in trend_copy:
+                trend_copy["_id"] = str(trend_copy["_id"])
+            # Convert datetime to ISO string for JSON response
+            if "createdAt" in trend_copy and isinstance(trend_copy["createdAt"], datetime):
+                trend_copy["createdAt"] = trend_copy["createdAt"].isoformat()
+            response_trends.append(trend_copy)
 
         # 6. VERIFY DATA WAS STORED
         stored_trends = trends_col.count_documents({})
@@ -171,7 +183,7 @@ def detect_and_store_trends():
         return {
             "message": "Trends detected and stored",
             "count": len(prisma_compatible_results),
-            "trends": prisma_compatible_results
+            "trends": response_trends  # Use serialized version for response
         }
     
     except Exception as e:
