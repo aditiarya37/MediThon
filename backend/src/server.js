@@ -1,31 +1,73 @@
+// backend/src/server.js
+import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+import classifyRoutes from "./routes/classify.routes.js";
+import eventsRoutes from "./routes/events.routes.js";
+import trendsRoutes from "./routes/trends.routes.js";
+import schedulerRoutes from "./routes/scheduler.routes.js";
+import schedulerService from "./services/scheduler.service.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Load environment variables
+dotenv.config();
 
-// 👇 EXPLICIT path to backend/.env
-dotenv.config({
-  path: path.resolve(__dirname, "../.env"),
-});
-
-const dbUrl = process.env.DATABASE_URL || "";
-if (dbUrl.includes("medithon")) {
-  console.log("✅ DATABASE: Connected to 'medithon'");
-} else {
-  console.log(
-    "❌ DATABASE: Connected to WRONG DB. URL is:",
-    dbUrl.split("@")[1] || dbUrl,
-  ); // Masks password
-}
-
-import app from "./app.js";
-
+const app = express();
 const PORT = process.env.PORT || 5000;
 
-console.log("CLASSIFIER_API_URL =", process.env.CLASSIFIER_API_URL);
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on port ${PORT}`);
+// Routes
+app.use("/api", classifyRoutes);
+app.use("/api", eventsRoutes);
+app.use("/api", trendsRoutes);
+app.use("/api", schedulerRoutes);
+
+// Health check
+app.get("/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    scheduler: schedulerService.isRunning ? "active" : "inactive",
+  });
 });
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Server error:", err);
+  res.status(500).json({
+    error: "Internal Server Error",
+    message: err.message,
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log("\n" + "=".repeat(60));
+  console.log("🚀 PharmaRadar Backend Server");
+  console.log("=".repeat(60));
+  console.log(`📡 API Server running on http://localhost:${PORT}`);
+  console.log(`🔍 Classifier API: ${process.env.CLASSIFIER_API_URL}`);
+  console.log(`📊 Trend Detection API: ${process.env.TREND_API_URL}`);
+  console.log("=".repeat(60) + "\n");
+
+  // Start the automated scheduler
+  console.log("🤖 Starting automated data collection...");
+  schedulerService.start();
+});
+
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("\n🛑 SIGTERM received, shutting down gracefully...");
+  schedulerService.stop();
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("\n🛑 SIGINT received, shutting down gracefully...");
+  schedulerService.stop();
+  process.exit(0);
+});
+
+export default app;
