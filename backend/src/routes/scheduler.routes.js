@@ -9,16 +9,17 @@ import {
 
 const router = express.Router();
 
-// Get scheduler status and statistics
-router.get("/scheduler/status", getSchedulerStatus);
+// Matches: GET http://localhost:5000/api/scheduler/status
+router.get("/status", getSchedulerStatus);
 
-// Trigger manual data fetch
-router.post("/scheduler/trigger", triggerManualRun);
+// Matches: POST http://localhost:5000/api/scheduler/run
+// Fixed path from "/scheduler/trigger" to "/run" to match frontend api.js
+router.post("/run", triggerManualRun);
 
-// Pause scheduler
-router.post("/scheduler/pause", pauseScheduler);
+// Matches: POST http://localhost:5000/api/scheduler/pause
+router.post("/pause", pauseScheduler);
 
-// Resume scheduler
-router.post("/scheduler/resume", resumeScheduler);
+// Matches: POST http://localhost:5000/api/scheduler/resume
+router.post("/resume", resumeScheduler);
 
 export default router;

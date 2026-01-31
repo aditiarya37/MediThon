@@ -22,7 +22,7 @@ app.use(express.json());
 app.use("/api", classifyRoutes);
 app.use("/api", eventsRoutes);
 app.use("/api", trendsRoutes);
-app.use("/api", schedulerRoutes);
+app.use("/api/scheduler", schedulerRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

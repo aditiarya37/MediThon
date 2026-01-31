@@ -4,67 +4,40 @@ import xml2js from "xml2js";
 
 const PUBMED_BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
 
-/**
- * Fetch recent pharmaceutical research abstracts from PubMed
- * Uses NCBI E-utilities API
- */
 export async function fetchPubMedAbstracts() {
   console.log("📚 Fetching PubMed research abstracts...");
 
   try {
-    // Calculate date range (last 7 days)
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 7);
-
-    const formatDate = (date) => {
-      return (
-        date.getFullYear() +
-        "/" +
-        String(date.getMonth() + 1).padStart(2, "0") +
-        "/" +
-        String(date.getDate()).padStart(2, "0")
-      );
-    };
-
-    // Search terms focused on pharma
     const searchTerms = [
       "pharmaceutical",
       "drug development",
       "clinical trial",
-      "adverse effects",
-      "drug approval",
-      "pharmacology",
     ].join(" OR ");
 
-    const dateRange = `${formatDate(startDate)}:${formatDate(endDate)}[PDAT]`;
-    const query = `(${searchTerms}) AND ${dateRange}`;
-
-    console.log(`  🔍 Search query: ${query}`);
-
-    // Step 1: Search for article IDs
-    const searchUrl = `${PUBMED_BASE_URL}/esearch.fcgi`;
-    const searchResponse = await axios.get(searchUrl, {
+    // Step 1: Search for articles
+    const searchResponse = await axios.get(`${PUBMED_BASE_URL}/esearch.fcgi`, {
       params: {
         db: "pubmed",
-        term: query,
-        retmax: 20, // Limit to 20 most recent
+        term: searchTerms,
+        retmax: 20,
         retmode: "json",
         sort: "pub_date",
+        reldate: 30, // Last 30 days
       },
-      timeout: 10000,
+      timeout: 15000,
     });
 
-    const idList = searchResponse.data.esearchresult.idlist || [];
-    console.log(`  📊 Found ${idList.length} recent articles`);
+    const idList = searchResponse.data.esearchresult?.idlist || [];
 
     if (idList.length === 0) {
+      console.log("📚 No recent PubMed articles found");
       return [];
     }
 
+    console.log(`  📊 Found ${idList.length} articles, fetching details...`);
+
     // Step 2: Fetch article details
-    const fetchUrl = `${PUBMED_BASE_URL}/efetch.fcgi`;
-    const fetchResponse = await axios.get(fetchUrl, {
+    const fetchResponse = await axios.get(`${PUBMED_BASE_URL}/efetch.fcgi`, {
       params: {
         db: "pubmed",
         id: idList.join(","),
@@ -73,49 +46,71 @@ export async function fetchPubMedAbstracts() {
       timeout: 15000,
     });
 
-    // Parse XML response
-    const parser = new xml2js.Parser({ explicitArray: false });
+    const parser = new xml2js.Parser({
+      explicitArray: false,
+      mergeAttrs: true,
+      normalize: true,
+      normalizeTags: true,
+      trim: true,
+    });
+
     const result = await parser.parseStringPromise(fetchResponse.data);
 
-    const articles = result.PubmedArticleSet?.PubmedArticle || [];
-    const items = [];
-
-    // Ensure articles is an array
+    const articles = result.pubmedarticleset?.pubmedarticle || [];
     const articleArray = Array.isArray(articles) ? articles : [articles];
+
+    const items = [];
 
     for (const article of articleArray) {
       try {
-        const medlineCitation = article.MedlineCitation;
-        const articleData = medlineCitation?.Article || {};
+        const medlineCitation = article.medlinecitation || {};
+        const pmidObj = medlineCitation.pmid;
+        const pmid =
+          typeof pmidObj === "object"
+            ? pmidObj._ || pmidObj
+            : pmidObj || "Unknown";
 
-        const pmid = medlineCitation?.PMID?._ || medlineCitation?.PMID || "";
-        const title = articleData.ArticleTitle || "";
-        const abstract = articleData.Abstract?.AbstractText || "";
+        const articleData = medlineCitation.article || {};
+        const title = articleData.articletitle || "No Title";
 
-        // Handle abstract (can be string or object)
+        // Get abstract if available
+        const abstractObj = articleData.abstract;
         let abstractText = "";
-        if (typeof abstract === "string") {
-          abstractText = abstract;
-        } else if (Array.isArray(abstract)) {
-          abstractText = abstract
-            .map((a) => (typeof a === "string" ? a : a._))
-            .join(" ");
-        } else if (abstract._) {
-          abstractText = abstract._;
+
+        if (abstractObj) {
+          const abstractTextObj = abstractObj.abstracttext;
+          if (Array.isArray(abstractTextObj)) {
+            abstractText = abstractTextObj
+              .map((t) => (typeof t === "object" ? t._ || t : t))
+              .join(" ");
+          } else if (typeof abstractTextObj === "object") {
+            abstractText = abstractTextObj._ || abstractTextObj;
+          } else {
+            abstractText = abstractTextObj || "";
+          }
         }
 
-        if (title && abstractText) {
-          const text = `${title}. ${abstractText}`.substring(0, 500);
+        // Get publication date
+        const pubDate =
+          medlineCitation.datecompleted || medlineCitation.datecreated || {};
 
-          items.push({
-            text,
-            source: `pubmed:${pmid}`,
-            timestamp: new Date(),
-          });
-        }
-      } catch (err) {
-        console.error("  ❌ Error parsing article:", err.message);
-        // Continue with other articles
+        const year = pubDate.year || new Date().getFullYear();
+        const month = pubDate.month || 1;
+        const day = pubDate.day || 1;
+        const timestamp = new Date(year, month - 1, day);
+
+        const text = abstractText
+          ? `${title}. ${abstractText}`.substring(0, 500)
+          : title.substring(0, 500);
+
+        items.push({
+          text: text,
+          source: `pubmed:${pmid}`,
+          timestamp: timestamp,
+          url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+        });
+      } catch (itemErr) {
+        console.error("    ⚠️  Error processing article:", itemErr.message);
       }
     }
 

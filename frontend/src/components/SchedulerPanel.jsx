@@ -168,8 +168,8 @@ export default function SchedulerPanel() {
           {/* Info */}
           <div className="bg-gray-50 p-3 rounded-lg mt-3">
             <p className="text-xs text-gray-600">
-              ℹ️ Automated collection runs every <strong>10 minutes</strong>{" "}
-              from RSS feeds, clinical trials, FDA announcements, and PubMed
+              ℹ️ Automated collection runs every <strong>2 hours</strong> from
+              RSS feeds, clinical trials, FDA announcements, and PubMed
               research.
             </p>
           </div>

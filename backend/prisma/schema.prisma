@@ -1,4 +1,4 @@
-// backend/prisma/schema.prisma
+// backend/prisma/schema.prisma - ENHANCED VERSION WITH EXTERNAL ID FIX
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,6 +14,7 @@ model Event {
   category   Category
   confidence Float
   source     String
+  externalId String?  @unique  // Fix: Added this field for deduplication
   createdAt  DateTime @default(now())
   
   @@map("Event")
@@ -22,12 +23,34 @@ model Event {
 model Trend {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   category    Category
-  spikeScore  Float
-  window      String
-  sampleTexts String[]
-  createdAt   DateTime @default(now())
   
-  // Maps the singular "Trend" model to the "trends" collection in MongoDB
+  // Spike metrics
+  spikeScore      Float      // How many times above baseline (e.g., 2.5x)
+  currentCount    Int        // Current event count in window
+  baselineCount   Float      // Average baseline count
+  percentIncrease Float      // Percentage increase (e.g., 150%)
+  
+  // Severity classification
+  severity        TrendSeverity  // LOW, MEDIUM, HIGH, CRITICAL
+  
+  // Temporal information
+  detectedAt      DateTime   @default(now())
+  windowStart     DateTime   // When this trend window started
+  windowEnd       DateTime   // When this trend window ended
+  windowDuration  String     // e.g., "2h", "1d"
+  
+  // Sample data for context
+  sampleTexts     String[]   // Up to 5 sample event texts
+  topSources      Json       // Top sources contributing to trend: [{source: "rss:FDA", count: 15}, ...]
+  
+  // Historical comparison
+  comparisonPeriod String    // e.g., "vs last 24h", "vs 7-day avg"
+  trendDirection   String    // "surging", "spiking", "elevated", "declining"
+  
+  // Metadata
+  createdAt       DateTime   @default(now())
+  isActive        Boolean    @default(true)  // False when trend normalizes
+  
   @@map("trends")
 }
 
@@ -38,4 +61,11 @@ enum Category {
   REGULATION_POLICY
   CLINICAL_TRIALS
   MARKETING_PROMOTION
+}
+
+enum TrendSeverity {
+  LOW          // 1.2x - 1.5x spike
+  MEDIUM       // 1.5x - 2.0x spike
+  HIGH         // 2.0x - 3.0x spike
+  CRITICAL     // 3.0x+ spike
 }
